@@ -1,0 +1,91 @@
+---
+#
+# Provision Digital Ocaen FreeBSD Droplets
+#
+# Non Digital Ocean Droplets will require SSH Keys Pushed
+# Digital Ocean Default FreeBSD username is "freebsd"
+#
+# Created by: Steven DeZalia
+# https://github.com/StevenDeZalia/
+# Update a FreeBSD machine, packages, ports, and installs Python 2.7
+# Tested Working on 10.3 x64, 10.4 x64, 11.1 x64 Images on Digital Ocean as of October 01, 2017
+
+- hosts: [Digital_Ocean_FreeBSD]
+  become: yes
+
+  tasks:
+
+    - name: Fetch new FreeBSD updates
+      shell: freebsd-update fetch --not-running-from-cron
+      when: ansible_distribution == 'FreeBSD'
+      register: result_update
+      changed_when: "'No updates needed' not in result_update.stdout"
+
+    - debug: var=result_update
+      when: result_update.changed
+
+
+
+    - name: Install FreeBSD updates
+      shell: freebsd-update install
+      when: ansible_distribution == 'FreeBSD' and result_update.changed
+      register: result_update_install
+
+    - debug: var=result_update_install
+      when: result_update_install.changed
+
+
+
+    - name: Upgrade FreeBSD packages
+      shell: pkg upgrade -y
+      when: ansible_distribution == 'FreeBSD'
+      register: result_pkg
+      changed_when: "'Your packages are up to date' not in result_pkg.stdout"
+
+    - debug: var=result_pkg
+      when: result_pkg.changed
+
+
+
+    - name: Fetche PortSnap Updates
+      shell: portsnap fetch --interactive
+      when: ansible_distribution == 'FreeBSD'
+      register: result_portsnap_fetch
+      changed_when: "'No updates needed' not in result_portsnap_fetch.stdout"
+
+    - debug: var=result_portsnap_fetch
+      when: result_portsnap_fetch.changed
+
+
+
+    - name: Extracts PortSnap
+      shell: portsnap extract
+      when: ansible_distribution == 'FreeBSD' and result_portsnap_fetch.changed
+      register: result_portsnap_extract
+      changed_when: "'Building new INDEX files... done.' not in result_portsnap_extract.stdout"
+
+    - debug: var=result_portsnap_extract
+      when: result_portsnap_extract.changed
+
+
+
+    - name: Updates PortSnap
+      shell: portsnap update
+      when: ansible_distribution == 'FreeBSD'
+      register: result_portsnap_update
+      changed_when: "'Ports tree is already up to date.' not in result_portsnap_update.stdout"
+
+    - debug: var=result_portsnap_update
+      when: result_portsnap_update.changed
+
+
+
+    - name: Install Python 2.7 on FreeBSD
+      shell: "pkg install -y python27"
+      when: ansible_os_family == "FreeBSD"
+      register: result_python27
+      changed_when: "'New packages to be INSTALLED:' not in result_python27.stdout"
+
+    - debug: var=result_python27
+      when: result_python27.changed
+...
